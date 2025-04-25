@@ -4,12 +4,24 @@
       {
         "src": "server/index.js",
         "use": "@vercel/node"
+      },
+      {
+        "src": "client/**/*",
+        "use": "@vercel/static"
       }
     ],
     "routes": [
       {
-        "src": "/(.*)",
+        "src": "/auth(.*)",
         "dest": "server/index.js"
+      },
+      {
+        "src": "/webhook",
+        "dest": "server/index.js"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "client/index.html"
       }
     ]
   }

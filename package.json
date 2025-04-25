@@ -1,19 +1,28 @@
 {
   "name": "instagram-automation",
   "version": "1.0.0",
-  "description": "Instagram automation server",
+  "description": "Instagram automation server with a React frontend",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "nodemon server/index.js"
+    "dev": "nodemon server/index.js",
+    "frontend": "serve -s client -p 3001"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "express": "^4.19.2",
     "axios": "^1.7.2",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
-  }
+    "nodemon": "^3.1.4",
+    "serve": "^14.2.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/instagram-automation.git"
+  },
+  "license": "MIT"
 }
-

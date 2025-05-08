@@ -16,49 +16,79 @@ let instagramScopeID = null;
 let pageId = null;
 let pageAccessToken = null;
 
-// Endpoint para procesar el token de acceso desde el frontend
-app.post('/auth/token', async (req, res) => {
-  const { accessToken: clientAccessToken } = req.body;
-  if (!clientAccessToken) {
-    return res.status(400).json({ error: 'Token de acceso no proporcionado' });
-  }
+// Generar URL de autenticación
+app.get('/auth', (req, res) => {
+  const scope = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments';
+  // const url = `https://www.facebook.com/v22.0/dialog/oauth?client_id=${IG_APP_ID}&redirect_uri=${IG_REDIRECT_URI}&response_type=code&scope=${scope}&auth_type=rerequest`;
+  const url = `https://www.instagram.com/oauth/authorize?client_id=${IG_APP_ID}&redirect_uri=${IG_REDIRECT_URI}&response_type=code&scope=${scope}`;
+  res.redirect(url);
+});
 
+// Callback de autenticación
+app.get('/auth/callback', async (req, res) => {
+  const code = req.query.code;
   try {
-    // Obtener información del usuario con el token
-    const userResponse = await axios.get('https://graph.facebook.com/v22.0/me', {
-      params: {
-        access_token: clientAccessToken,
-        fields: 'id,name',
-      },
+    // Obtener token de corta duración
+    const tokenResponse = await axios.post('https://api.instagram.com/oauth/access_token', {
+      client_id: IG_APP_ID,
+      client_secret: IG_APP_SECRET,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: IG_REDIRECT_URI,
+    }, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
-    // Obtener cuentas de Instagram Business asociadas
-    const igResponse = await axios.get('https://graph.facebook.com/v22.0/me/accounts', {
+    const shortLivedToken = tokenResponse.data.access_token;
+    const userId = tokenResponse.data.user_id;
+
+    // Obtener token de larga duración
+    const longLivedResponse = await axios.get('https://graph.instagram.com/access_token', {
       params: {
-        access_token: clientAccessToken,
-        fields: 'instagram_business_account{id,username},access_token',
-      },
+        grant_type: 'ig_exchange_token',
+        client_secret: IG_APP_SECRET,
+        access_token: shortLivedToken,
+      }
     });
 
-    const instagramAccount = igResponse.data.data.find(page => page.instagram_business_account);
-    if (!instagramAccount) {
-      return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada' });
+    accessToken = longLivedResponse.data.access_token;
+
+    // Obtener las páginas de Facebook del usuario
+    const pagesResponse = await axios.get(`https://graph.facebook.com/v22.0/me/accounts`, {
+      params: {
+        access_token: accessToken,
+      }
+    });
+
+    // Buscar la página vinculada a la cuenta de Instagram
+    let pageId, pageAccessToken;
+    for (const page of pagesResponse.data.data) {
+      const igResponse = await axios.get(`https://graph.facebook.com/v22.0/${page.id}?fields=instagram_business_account`, {
+        params: {
+          access_token: page.access_token,
+        }
+      });
+      if (igResponse.data.instagram_business_account && igResponse.data.instagram_business_account.id === instagramScopeID) {
+        pageId = page.id;
+        pageAccessToken = page.access_token;
+        break;
+      }
     }
 
-    // Almacenar información relevante
-    accessToken = clientAccessToken;
-    instagramScopeID = instagramAccount.instagram_business_account.id;
-    pageId = instagramAccount.id;
-    pageAccessToken = instagramAccount.access_token;
-
-    res.json({
-      message: 'Cuenta conectada con éxito',
-      instagramScopeID,
-      username: instagramAccount.instagram_business_account.username,
+    // Obtener instagramScopeID
+    const userInfo = await axios.get(`https://graph.instagram.com/v22.0/${userId}`, {
+      params: {
+        access_token: accessToken,
+        fields: 'id,username',
+      }
     });
+
+    instagramScopeID = userInfo.data.id;
+
+    res.send('Cuenta conectada con éxito. Puedes cerrar esta ventana.');
   } catch (error) {
     console.error('Error en autenticación:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Error al conectar la cuenta' });
+    res.status(500).send('Error al conectar la cuenta');
   }
 });
 
@@ -118,7 +148,7 @@ async function sendMessage(recipientId, message) {
 
   try {
     await axios.post(
-      'https://graph.facebook.com/v22.0/me/messages',
+      `https://graph.facebook.com/v22.0/me/messages`,
       {
         recipient: { id: recipientId },
         message: { text: message },
@@ -126,7 +156,7 @@ async function sendMessage(recipientId, message) {
       {
         params: {
           access_token: pageAccessToken,
-        },
+        }
       }
     );
     console.log('Mensaje enviado:', message);
@@ -139,3 +169,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
+

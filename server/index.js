@@ -13,6 +13,8 @@ const IG_REDIRECT_URI = process.env.IG_REDIRECT_URI;
 const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN;
 let accessToken = null;
 let instagramScopeID = null;
+let pageId = null;
+let pageAccessToken = null;
 
 // Generar URL de autenticación
 app.get('/auth', (req, res) => {
@@ -33,7 +35,7 @@ app.get('/auth/callback', async (req, res) => {
       code,
       redirect_uri: IG_REDIRECT_URI,
     }, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
     const shortLivedToken = tokenResponse.data.access_token;
@@ -49,6 +51,28 @@ app.get('/auth/callback', async (req, res) => {
     });
 
     accessToken = longLivedResponse.data.access_token;
+
+    // Obtener las páginas de Facebook del usuario
+    const pagesResponse = await axios.get(`https://graph.facebook.com/v22.0/me/accounts`, {
+      params: {
+        access_token: accessToken,
+      }
+    });
+
+    // Buscar la página vinculada a la cuenta de Instagram
+    let pageId, pageAccessToken;
+    for (const page of pagesResponse.data.data) {
+      const igResponse = await axios.get(`https://graph.facebook.com/v22.0/${page.id}?fields=instagram_business_account`, {
+        params: {
+          access_token: page.access_token,
+        }
+      });
+      if (igResponse.data.instagram_business_account && igResponse.data.instagram_business_account.id === instagramScopeID) {
+        pageId = page.id;
+        pageAccessToken = page.access_token;
+        break;
+      }
+    }
 
     // Obtener instagramScopeID
     const userInfo = await axios.get(`https://graph.instagram.com/v22.0/${userId}`, {
@@ -116,21 +140,21 @@ app.post('/webhook', async (req, res) => {
 
 // Función para enviar mensajes
 async function sendMessage(recipientId, message) {
-  if (!accessToken || !instagramScopeID) {
-    console.error('No se ha autenticado la cuenta');
+  if (!pageAccessToken || !pageId) {
+    console.error('No se ha autenticado la cuenta o no se encontró la página de Facebook');
     return;
   }
 
   try {
     await axios.post(
-      `https://graph.instagram.com/v22.0/${instagramScopeID}/messages`,
+      `https://graph.facebook.com/v22.0/me/messages`,
       {
         recipient: { id: recipientId },
         message: { text: message },
       },
       {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+        params: {
+          access_token: pageAccessToken,
         }
       }
     );
@@ -144,3 +168,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
+

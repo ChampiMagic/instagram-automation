@@ -19,7 +19,8 @@ let pageAccessToken = null;
 // Generar URL de autenticación
 app.get('/auth', (req, res) => {
   const scope = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments';
-  const url = `https://www.instagram.com/oauth/authorize?client_id=${IG_APP_ID}&redirect_uri=${IG_REDIRECT_URI}&response_type=code&scope=${scope}`;
+  const url = `https://www.facebook.com/v22.0/dialog/oauth?client_id=${IG_APP_ID}&redirect_uri=${IG_REDIRECT_URI}&response_type=code&scope=${scope}&auth_type=rerequest`;
+  // const url = `https://www.instagram.com/oauth/authorize?client_id=${IG_APP_ID}&redirect_uri=${IG_REDIRECT_URI}&response_type=code&scope=${scope}`;
   res.redirect(url);
 });
 

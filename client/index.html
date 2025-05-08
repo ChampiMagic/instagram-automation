@@ -8,13 +8,66 @@
   <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <!-- Cargar el SDK de Facebook -->
+  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
   <div id="root"></div>
   <script type="text/babel">
+    // Inicializar el SDK de Facebook
+    window.fbAsyncInit = function() {
+      FB.init({
+        appId: '1052670370242686', // Reemplaza con tu App ID de Meta Developer
+        cookie: true,
+        xfbml: true,
+        version: 'v22.0'
+      });
+
+      // Verificar el estado de login al cargar la página
+      FB.getLoginStatus(function(response) {
+        statusChangeCallback(response);
+      });
+    };
+
+    // Manejar el estado de login
+    function statusChangeCallback(response) {
+      const statusDiv = document.getElementById('status');
+      if (response.status === 'connected') {
+        // Usuario está logeado y autorizado
+        statusDiv.innerHTML = 'Conectado con éxito. ¡Tu cuenta está lista!';
+        // Enviar el token de acceso al backend
+        fetch('/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: response.authResponse.accessToken })
+        })
+        .then(res => res.json())
+        .then(data => console.log('Respuesta del backend:', data))
+        .catch(error => console.error('Error al enviar token:', error));
+      } else if (response.status === 'not_authorized') {
+        // Usuario está logeado en Facebook pero no ha autorizado la app
+        statusDiv.innerHTML = 'Por favor, autoriza la aplicación para conectar tu cuenta de Instagram.';
+      } else {
+        // Usuario no está logeado en Facebook
+        statusDiv.innerHTML = 'Por favor, inicia sesión con Facebook para continuar.';
+      }
+    }
+
+    // Componente React
     const Home = () => {
-      const handleConnect = () => {
-        window.location.href = '/auth';
+      const handleLogin = () => {
+        FB.login(function(response) {
+          if (response.authResponse) {
+            console.log('Login exitoso');
+            statusChangeCallback(response); // Actualizar el estado tras el login
+          } else {
+            console.log('Login cancelado por el usuario');
+            document.getElementById('status').innerHTML = 'Login cancelado. Intenta de nuevo.';
+          }
+        }, {
+          scope: 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments',
+          auth_type: 'rerequest'
+        });
       };
 
       return (
@@ -25,11 +78,12 @@
               Conecta tu cuenta de Instagram para habilitar respuestas automáticas.
             </p>
             <button
-              onClick={handleConnect}
+              onClick={handleLogin}
               className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition"
             >
               Conectar con Instagram
             </button>
+            <div id="status" className="mt-4 text-gray-600"></div>
           </div>
           <footer className="mt-4 text-gray-500 text-sm">
             <a href="/privacy-policy" className="underline hover:text-gray-700">
@@ -40,6 +94,7 @@
       );
     };
 
+    // Renderizar el componente
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<Home />);
   </script>

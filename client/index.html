@@ -65,7 +65,7 @@
             document.getElementById('status').innerHTML = 'Login cancelado. Intenta de nuevo.';
           }
         }, {
-          scope: '', // instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments
+          scope: 'public_profile', // instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments
           auth_type: 'rerequest'
         });
       };

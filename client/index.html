@@ -36,7 +36,7 @@
         // Usuario está logeado y autorizado
         statusDiv.innerHTML = 'Conectado con éxito. ¡Tu cuenta está lista!';
         // Enviar el token de acceso al backend
-        fetch('http://localhost:3000/auth/token', {
+        fetch('/auth/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: response.authResponse.accessToken })

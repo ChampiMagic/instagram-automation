@@ -23,6 +23,8 @@ app.post('/auth/token', async (req, res) => {
     return res.status(400).json({ error: 'Token de acceso no proporcionado' });
   }
 
+  console.debug('clientAccessToken', clientAccessToken);
+
   try {
     // Obtener información del usuario con el token
     const userResponse = await axios.get('https://graph.facebook.com/v22.0/me', {
@@ -32,6 +34,8 @@ app.post('/auth/token', async (req, res) => {
       },
     });
 
+    console.debug('userResponse', userResponse);
+
     // Obtener cuentas de Instagram Business asociadas
     const igResponse = await axios.get('https://graph.facebook.com/v22.0/me/accounts', {
       params: {
@@ -39,6 +43,8 @@ app.post('/auth/token', async (req, res) => {
         fields: 'instagram_business_account{id,username},access_token',
       },
     });
+
+    console.debug('igResponse', igResponse);
 
     const instagramAccount = igResponse.data.data.find(page => page.instagram_business_account);
     if (!instagramAccount) {

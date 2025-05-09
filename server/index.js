@@ -20,6 +20,7 @@ let pageAccessToken = null;
 app.post('/auth/token', async (req, res) => {
   const { accessToken: clientAccessToken } = req.body;
   if (!clientAccessToken) {
+    console.error('Token de acceso no proporcionado');
     return res.status(400).json({ error: 'Token de acceso no proporcionado' });
   }
 

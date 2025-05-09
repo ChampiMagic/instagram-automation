@@ -20,7 +20,6 @@ let pageAccessToken = null;
 app.post('/auth/token', async (req, res) => {
   const { accessToken: clientAccessToken } = req.body;
   if (!clientAccessToken) {
-    console.error('Token de acceso no proporcionado');
     return res.status(400).json({ error: 'Token de acceso no proporcionado' });
   }
 
@@ -43,7 +42,7 @@ app.post('/auth/token', async (req, res) => {
 
     const instagramAccount = igResponse.data.data.find(page => page.instagram_business_account);
     if (!instagramAccount) {
-      return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada' });
+      return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada', page: igResponse.data });
     }
 
     // Almacenar información relevante

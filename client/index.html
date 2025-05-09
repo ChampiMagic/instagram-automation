@@ -36,7 +36,7 @@
         // Usuario está logeado y autorizado
         statusDiv.innerHTML = 'Conectado con éxito. ¡Tu cuenta está lista!';
         // Enviar el token de acceso al backend
-        fetch('/auth/token', {
+        fetch('http://localhost:3000/auth/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: response.authResponse.accessToken })
@@ -49,14 +49,14 @@
         statusDiv.innerHTML = 'Por favor, autoriza la aplicación para conectar tu cuenta de Instagram.';
       } else {
         // Usuario no está logeado en Facebook
-        statusDiv.innerHTML = 'Por favor, inicia sesión con Facebook para continuar.';
+        statusDiv.innerHTML = 'Por favor, inicia sesión con Facebook para continuar.';  
       }
     }
 
     // Componente React
     const Home = () => {
       const handleLogin = () => {
-        FB.login(function(response) {
+        FB.login(function(response) {  
           if (response.authResponse) {
             console.log('Login exitoso');
             statusChangeCallback(response); // Actualizar el estado tras el login

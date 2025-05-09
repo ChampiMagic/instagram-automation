@@ -48,7 +48,7 @@ app.post('/auth/token', async (req, res) => {
 
     const instagramAccount = igResponse.data.data.find(page => page.instagram_business_account);
     if (!instagramAccount) {
-      return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada', page: igResponse.data });
+      return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada', page: igResponse });
     }
 
     // Almacenar información relevante

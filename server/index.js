@@ -7,7 +7,8 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: 'http://localhost:3001' })); // Ajusta el origen según el puerto del frontend
+//app.use(cors({ origin: 'http://localhost:3001' })); // Ajusta el origen según el puerto del frontend
+app.use(cors({ origin: 'https://instagram-automation-setters.vercel.app' })); // Ajusta el origen según el puerto del frontend
 
 const IG_APP_ID = process.env.IG_APP_ID;
 const IG_APP_SECRET = process.env.IG_APP_SECRET;

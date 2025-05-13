@@ -132,10 +132,10 @@ app.post('/webhook', async (req, res) => {
 
 // Función para enviar mensajes
 async function sendMessage(recipientId, message) {
-  if (!pageAccessToken || !pageId) {
-    console.error('No se ha autenticado la cuenta o no se encontró la página de Facebook');
-    return;
-  }
+  //if (!pageAccessToken || !pageId) {
+  //  console.error('No se ha autenticado la cuenta o no se encontró la página de Facebook');
+  //  return;
+  //}
 
   try {
     await axios.post(

@@ -6,12 +6,14 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
-    "frontend": "serve -s client -p 3001"
+    "frontend": "serve -s client -p 3001",
+    "frontend:dev": "serve -s client -p 3001"
   },
   "dependencies": {
-    "express": "^4.19.2",
     "axios": "^1.7.2",
-    "dotenv": "^16.4.5"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.4",

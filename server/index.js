@@ -1,11 +1,13 @@
 const express = require('express');
 const axios = require('axios');
 const dotenv = require('dotenv');
+const cors = require('cors');
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors({ origin: 'http://localhost:3001' })); // Ajusta el origen según el puerto del frontend
 
 const IG_APP_ID = process.env.IG_APP_ID;
 const IG_APP_SECRET = process.env.IG_APP_SECRET;
@@ -23,7 +25,7 @@ app.post('/auth/token', async (req, res) => {
     return res.status(400).json({ error: 'Token de acceso no proporcionado' });
   }
 
-  console.debug('clientAccessToken', clientAccessToken);
+  console.debug('clientAccessToken');
 
   try {
     // Obtener información del usuario con el token
@@ -34,7 +36,7 @@ app.post('/auth/token', async (req, res) => {
       },
     });
 
-    console.debug('userResponse', userResponse);
+    console.debug('userResponse');
 
     // Obtener cuentas de Instagram Business asociadas
     const igResponse = await axios.get('https://graph.facebook.com/v22.0/me/accounts', {
@@ -47,21 +49,30 @@ app.post('/auth/token', async (req, res) => {
     console.debug('igResponse', igResponse);
 
     const instagramAccount = igResponse.data.data.find(page => page.instagram_business_account);
+    console.debug('instagramAccount', instagramAccount);
     if (!instagramAccount) {
-      return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada', page: igResponse });
+      return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada', page: igResponse.data });
     }
 
+    console.debug('1');
     // Almacenar información relevante
     accessToken = clientAccessToken;
     instagramScopeID = instagramAccount.instagram_business_account.id;
     pageId = instagramAccount.id;
     pageAccessToken = instagramAccount.access_token;
 
+
+    console.debug('2');
+
     res.json({
       message: 'Cuenta conectada con éxito',
       instagramScopeID,
       username: instagramAccount.instagram_business_account.username,
     });
+
+
+    console.debug('3');
+
   } catch (error) {
     console.error('Error en autenticación:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: 'Error al conectar la cuenta' });
@@ -74,6 +85,8 @@ app.get('/webhook', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
+  console.log("Verificando webhook");
+
   if (mode === 'subscribe' && token === IG_VERIFY_TOKEN) {
     res.status(200).send(challenge);
   } else {
@@ -85,6 +98,8 @@ app.get('/webhook', (req, res) => {
 app.post('/webhook', async (req, res) => {
   try {
     const data = req.body;
+
+    console.debug('data', data);
 
     if (data.entry && data.entry[0]) {
       // Procesar comentarios

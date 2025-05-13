@@ -36,7 +36,7 @@
         // Usuario está logeado y autorizado
         statusDiv.innerHTML = 'Conectado con éxito. ¡Tu cuenta está lista!';
         // Enviar el token de acceso al backend
-        fetch('/auth/token', {
+        fetch('http://localhost:3000/auth/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: response.authResponse.accessToken })
@@ -65,7 +65,7 @@
             document.getElementById('status').innerHTML = 'Login cancelado. Intenta de nuevo.';
           }
         }, {
-          scope: 'business_management, business_management', // instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments
+          scope: 'business_management,pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_messages,instagram_manage_comments',
           auth_type: 'rerequest'
         });
       };

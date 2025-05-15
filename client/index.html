@@ -36,7 +36,7 @@
         // Usuario está logeado y autorizado
         statusDiv.innerHTML = 'Conectado con éxito. ¡Tu cuenta está lista!';
         // Enviar el token de acceso al backend
-        fetch('https://7528-2800-2368-2400-489-2409-3ba4-2af7-75a1.ngrok-free.app/auth/token', {  //fetch('http://localhost:3000/auth/token', {
+        fetch('https://9dcc-2800-2368-2400-489-51cc-1c5a-4de1-21ca.ngrok-free.app/auth/token', {  //fetch('http://localhost:3000/auth/token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: response.authResponse.accessToken })

@@ -5,6 +5,8 @@ const cors = require('cors');
 
 dotenv.config();
 
+//TODO: Verificar que se esta obteniendo un token de larga duracionn
+
 const app = express();
 app.use(express.json());
 //app.use(cors({ origin: 'http://localhost:3001' })); // Ajusta el origen según el puerto del frontend
@@ -14,10 +16,53 @@ const IG_APP_ID = process.env.IG_APP_ID;
 const IG_APP_SECRET = process.env.IG_APP_SECRET;
 const IG_REDIRECT_URI = process.env.IG_REDIRECT_URI;
 const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN;
-let accessToken = null;
-let instagramScopeID = null;
-let pageId = null;
-let pageAccessToken = null;
+
+// Token storage structure
+let tokenData = {
+  accessToken: null,
+  longLivedToken: null,
+  tokenExpiry: null,
+  instagramScopeID: null,
+  pageId: null,
+  pageAccessToken: null
+};
+
+// Function to exchange short-lived token for long-lived token
+async function exchangeForLongLivedToken(shortLivedToken) {
+  try {
+    const response = await axios.get('https://graph.facebook.com/v22.0/oauth/access_token', {
+      params: {
+        grant_type: 'fb_exchange_token',
+        client_id: IG_APP_ID,
+        client_secret: IG_APP_SECRET,
+        fb_exchange_token: shortLivedToken
+      }
+    });
+
+    const { access_token, expires_in } = response.data;
+    const expiryDate = new Date();
+    expiryDate.setSeconds(expiryDate.getSeconds() + expires_in);
+
+    return {
+      token: access_token,
+      expiry: expiryDate
+    };
+  } catch (error) {
+    console.error('Error exchanging token:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+}
+
+// Function to check if token needs renewal
+function shouldRenewToken() {
+  if (!tokenData.tokenExpiry) return true;
+  
+  const now = new Date();
+  const daysUntilExpiry = (tokenData.tokenExpiry - now) / (1000 * 60 * 60 * 24);
+  
+  // Renew if less than 7 days until expiry
+  return daysUntilExpiry < 7;
+}
 
 // Endpoint para procesar el token de acceso desde el frontend
 app.post('/auth/token', async (req, res) => {
@@ -26,53 +71,47 @@ app.post('/auth/token', async (req, res) => {
     return res.status(400).json({ error: 'Token de acceso no proporcionado' });
   }
 
-  console.debug('clientAccessToken');
-
   try {
+    // Exchange for long-lived token
+    const { token: longLivedToken, expiry } = await exchangeForLongLivedToken(clientAccessToken);
+    
     // Obtener información del usuario con el token
     const userResponse = await axios.get('https://graph.facebook.com/v22.0/me', {
       params: {
-        access_token: clientAccessToken,
+        access_token: longLivedToken,
         fields: 'id,name',
       },
     });
 
-    console.debug('userResponse');
-
     // Obtener cuentas de Instagram Business asociadas
     const igResponse = await axios.get('https://graph.facebook.com/v22.0/me/accounts', {
       params: {
-        access_token: clientAccessToken,
+        access_token: longLivedToken,
         fields: 'instagram_business_account{id,username},access_token',
       },
     });
 
-    console.debug('igResponse', igResponse);
-
     const instagramAccount = igResponse.data.data.find(page => page.instagram_business_account);
-    console.debug('instagramAccount', instagramAccount);
     if (!instagramAccount) {
       return res.status(400).json({ error: 'No se encontró una cuenta de Instagram Business vinculada', page: igResponse.data });
     }
 
-    console.debug('1');
-    // Almacenar información relevante
-    accessToken = clientAccessToken;
-    instagramScopeID = instagramAccount.instagram_business_account.id;
-    pageId = instagramAccount.id;
-    pageAccessToken = instagramAccount.access_token;
-
-
-    console.debug('2');
+    // Update token data
+    tokenData = {
+      accessToken: clientAccessToken,
+      longLivedToken,
+      tokenExpiry: expiry,
+      instagramScopeID: instagramAccount.instagram_business_account.id,
+      pageId: instagramAccount.id,
+      pageAccessToken: instagramAccount.access_token
+    };
 
     res.json({
       message: 'Cuenta conectada con éxito',
-      instagramScopeID,
+      instagramScopeID: tokenData.instagramScopeID,
       username: instagramAccount.instagram_business_account.username,
+      tokenExpiry: tokenData.tokenExpiry
     });
-
-
-    console.debug('3');
 
   } catch (error) {
     console.error('Error en autenticación:', error.response ? error.response.data : error.message);
@@ -133,9 +172,21 @@ app.post('/webhook', async (req, res) => {
 
 // Función para enviar mensajes
 async function sendMessage(recipientId, message) {
-  if (!pageAccessToken || !pageId) {
-      console.error('No se ha autenticado la cuenta o no se encontró la página de Facebook');
+  if (!tokenData.pageAccessToken || !tokenData.pageId) {
+    console.error('No se ha autenticado la cuenta o no se encontró la página de Facebook');
     return;
+  }
+
+  // Check if token needs renewal
+  if (shouldRenewToken()) {
+    try {
+      const { token: newToken, expiry } = await exchangeForLongLivedToken(tokenData.accessToken);
+      tokenData.longLivedToken = newToken;
+      tokenData.tokenExpiry = expiry;
+    } catch (error) {
+      console.error('Error renewing token:', error);
+      // Continue with existing token if renewal fails
+    }
   }
 
   try {
@@ -147,7 +198,7 @@ async function sendMessage(recipientId, message) {
       },
       {
         params: {
-          access_token: pageAccessToken,
+          access_token: tokenData.pageAccessToken,
         },
       }
     );

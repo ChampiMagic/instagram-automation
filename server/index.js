@@ -12,10 +12,9 @@ app.use(express.json());
 //app.use(cors({ origin: 'http://localhost:3001' })); // Ajusta el origen según el puerto del frontend
 app.use(cors({ origin: 'https://instagram-automation-setters.vercel.app' })); // Ajusta el origen según el puerto del frontend
 
-const IG_APP_ID = process.env.IG_APP_ID;
-const IG_APP_SECRET = process.env.IG_APP_SECRET;
-const IG_REDIRECT_URI = process.env.IG_REDIRECT_URI;
-const IG_VERIFY_TOKEN = process.env.IG_VERIFY_TOKEN;
+const APP_ID = process.env.APP_ID;
+const APP_SECRET = process.env.APP_SECRET;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 // Token storage structure
 let tokenData = {
@@ -33,8 +32,8 @@ async function exchangeForLongLivedToken(shortLivedToken) {
     const response = await axios.get('https://graph.facebook.com/v22.0/oauth/access_token', {
       params: {
         grant_type: 'fb_exchange_token',
-        client_id: IG_APP_ID,
-        client_secret: IG_APP_SECRET,
+        client_id: APP_ID,
+        client_secret: APP_SECRET,
         fb_exchange_token: shortLivedToken
       }
     });
@@ -70,6 +69,8 @@ app.post('/auth/token', async (req, res) => {
   if (!clientAccessToken) {
     return res.status(400).json({ error: 'Token de acceso no proporcionado' });
   }
+
+  console.debug('clientAccessToken', clientAccessToken);
 
   try {
     // Exchange for long-lived token
@@ -127,7 +128,7 @@ app.get('/webhook', (req, res) => {
 
   console.log("Verificando webhook");
 
-  if (mode === 'subscribe' && token === IG_VERIFY_TOKEN) {
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
     res.status(200).send(challenge);
   } else {
     res.status(403).send('Verificación fallida');
@@ -189,12 +190,15 @@ async function sendMessage(recipientId, message) {
     }
   }
 
+  const link = 'https://app.small.ar/5sfuo8J6';
+
   try {
+    // First send the text message with the link
     await axios.post(
       'https://graph.facebook.com/v22.0/me/messages',
       {
         recipient: { id: recipientId },
-        message: { text: message },
+        message: { text: `${message}\n${link}` },
       },
       {
         params: {
@@ -202,7 +206,37 @@ async function sendMessage(recipientId, message) {
         },
       }
     );
-    console.log('Mensaje enviado:', message);
+
+    // Then send the button template
+    await axios.post(
+      'https://graph.facebook.com/v22.0/me/messages',
+      {
+        recipient: { id: recipientId },
+        message: {
+          attachment: {
+            type: "template",
+            payload: {
+              template_type: "button",
+              text: "Haz clic en el botón para obtener tu descuento:",
+              buttons: [
+                {
+                  type: "web_url",
+                  url: link,
+                  title: "Obtener Descuento"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        params: {
+          access_token: tokenData.pageAccessToken,
+        },
+      }
+    );
+    
+    console.log('Mensaje y botón enviados correctamente');
   } catch (error) {
     console.error('Error enviando mensaje:', error.response ? error.response.data : error.message);
   }
